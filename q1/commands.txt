@@ -1,0 +1,18 @@
+----------------run on command line of your computer
+
+mongoimport --collection events --file historical-events.json
+
+
+
+----------------Run on Mongo Terminal
+mongo
+
+load("C:/data/db/dataedit.js")
+
+db.events.find().forEach(dateEdit)
+
+
+var res = db.events.aggregate(     { $group : {         _id: {             year : { $year : "$date" },                 },         count: { $sum: 1 }     }}
+,{ $out : "filtdate" } );
+
+mongoexport --db test --collection filtdate --out finalRes.json

@@ -1,0 +1,96 @@
+----------------run on command line of your computer
+
+mongoimport --collection meteor --file meteorites.json
+
+
+
+
+
+----------------------
+//filter by Fell
+db.meteor.aggregate(
+    [ { $match : { fall: "Fell" }},{ $out : "filterbyfell" }
+ ]
+);
+
+
+db.filterbyfell.aggregate([
+    { "$addFields": {
+        "date": {
+            "$toDate": "$year"
+        
+    } 
+	}
+	},{ $out : "filtered" }
+])
+
+//convert the string to date
+db.filtered.aggregate([
+    {"$match": {
+        "date" :{
+            "$gte": ISODate("1950-00-01T00:00:00.000Z")
+        }
+    }},{ $out : "filteredDate" }
+])
+
+
+db.filteredDate.find()
+
+
+----Import worldcities
+mongoimport --collection worldcities --file worldcities.csv --type csv --headerline
+
+db.worldcities.find().forEach(
+//Cordinates not coming properly--here below...lat and long
+function(d) {
+    var address = {
+  "country": d.country,
+  "city": d.city,
+  "loc": {
+    "type": "Point",
+    "coordinates": [
+      d.lng,
+      d.lat 
+    ]
+  }
+    }
+db.worldcitiesGeo.save(address)
+}
+)
+
+
+
+//////Create index for locations
+db.worldcitiesGeo.createIndex( { "loc" : "2dsphere" } )
+
+
+//search
+db.filteredDate.find().forEach(
+//Cordinates not coming properly--here below...lat and long
+function(d) {
+print("Processing ----- ")
+print(d.id)
+if(d.geolocation){
+var r = db.worldcitiesGeo.findOne(
+{
+   "loc": {
+     $near: {
+       $geometry: {
+          type: "Point" ,
+          coordinates: [ d.geolocation.coordinates[0], d.geolocation.coordinates[1] ]
+       },
+     }
+   }
+})
+d.nearestCity = r.city
+d.nearestCountry = r.country
+db.filterbyfell.save(d)
+db.geoRes.save(r)
+}
+}
+)
+
+mongoexport --db test --collection filterbyfell --out finalRes.json
+
+
+
